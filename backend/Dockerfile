@@ -14,4 +14,4 @@ COPY . .
 # NOTE: 8088 is the deliberately non-default port for this API (usual is 8000)
 EXPOSE 8088
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8088"]
+CMD sh -c "python -m seed.seed; uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8088}"

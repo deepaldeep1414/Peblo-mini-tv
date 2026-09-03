@@ -1,0 +1,70 @@
+services:
+  # ── 1. FastAPI Backend ──────────────────────────────────────────────────────
+  - type: web
+    name: peblo-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    envVars:
+      - key: ENV
+        value: production
+      - key: API_PORT
+        value: "8088"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: peblo-db
+          property: connectionString
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_ROOT
+        value: /data/storage
+      - key: EDITOR_API_KEY
+        generateValue: true
+      - key: ADMIN_API_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "https://peblo-cms.onrender.com,https://peblo-viewer.onrender.com"
+    disk:
+      name: peblo-storage
+      mountPath: /data/storage
+      sizeGB: 1
+
+  # ── 2. CMS Frontend ─────────────────────────────────────────────────────────
+  - type: web
+    name: peblo-cms
+    runtime: docker
+    dockerfilePath: ./cms/Dockerfile.prod
+    dockerContext: ./cms
+    plan: free
+    region: oregon
+    buildArgs:
+      - key: VITE_API_BASE
+        value: https://peblo-api.onrender.com
+    envVars:
+      - key: VITE_API_BASE
+        value: https://peblo-api.onrender.com
+
+  # ── 3. Viewer Frontend ──────────────────────────────────────────────────────
+  - type: web
+    name: peblo-viewer
+    runtime: docker
+    dockerfilePath: ./viewer/Dockerfile.prod
+    dockerContext: ./viewer
+    plan: free
+    region: oregon
+    buildArgs:
+      - key: VITE_API_BASE
+        value: https://peblo-api.onrender.com
+    envVars:
+      - key: VITE_API_BASE
+        value: https://peblo-api.onrender.com
+
+# ── 4. PostgreSQL Database ────────────────────────────────────────────────────
+databases:
+  - name: peblo-db
+    plan: free
+    region: oregon
+    databaseName: peblo_tv_mini
+    user: peblo
