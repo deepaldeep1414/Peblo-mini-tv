@@ -1,211 +1,347 @@
-# Peblo TV Mini
+# Peblo Mini TV
 
-CMS upload → published catalogue → Netflix-style browse. Three layers (API,
-CMS, Viewer) plus the publish pipeline that connects them.
+> A full-stack streaming-platform prototype that connects content management, validation, publishing, and a Netflix-style viewing experience.
 
-## Prerequisites
+**CMS → Validation → Publish → Catalogue → Viewer**
 
-- Docker and Docker Compose (v2, the `docker compose` plugin — this repo
-  uses `docker-compose.yml` which also works with the older standalone
-  `docker-compose` binary).
-- Nothing else is required to run the whole stack — Python, Node, and
-  Postgres all run inside containers.
+Peblo Mini TV is a mini OTT platform built to demonstrate how a content team can manage shows and episodes, validate artwork, publish a consistent catalogue, and deliver a polished browsing experience to viewers.
 
-If you want to run pieces outside Docker (e.g. for faster iteration):
-- Python 3.12 + pip (backend)
-- Node.js 20 + npm (cms, viewer)
-- PostgreSQL 16, or just point `DATABASE_URL` at a local SQLite file for
-  quick experiments — the backend falls back to SQLite automatically if
-  `DATABASE_URL` isn't set.
+## Project overview
 
-## Ports (all changed from their usual defaults)
+Peblo Mini TV is designed around a simple but important separation:
 
-| Service          | Default | This project | Why |
-|-------------------|---------|--------------|-----|
-| PostgreSQL         | 5432    | **55432**    | avoid clashing with any local Postgres |
-| API (FastAPI)      | 8000    | **8088**     | avoid clashing with other local dev APIs |
-| CMS (Vite dev)     | 5173    | **5180**     | avoid clashing with default Vite apps |
-| Viewer (Vite dev)  | 5173/4  | **5190**     | avoid clashing with CMS and other Vite apps |
+* **CMS:** Where content is created and managed.
+* **API:** Where business logic, authentication, validation, and catalogue operations live.
+* **Viewer:** Where users browse the published catalogue.
+* **Publish pipeline:** Where approved content becomes a consistent, viewer-facing snapshot.
 
-## Run it
+The project focuses on **content publishing reliability**, not just building a streaming UI.
+
+## Features
+
+### Content management
+
+* Create and manage shows, seasons, and episodes.
+* Edit show metadata and catalogue information.
+* Upload poster, banner, and thumbnail artwork.
+* Manage content through a dedicated CMS interface.
+
+### Artwork validation
+
+The publishing workflow validates artwork before it can go live.
+
+* Required artwork checks.
+* Aspect-ratio validation.
+* Image-size ceiling validation.
+* Missing episode-duration checks.
+* Validation reports that identify blocking issues.
+
+### Publishing pipeline
+
+* Publish only after validation passes.
+* Generate a pre-published catalogue.
+* Keep the viewer-facing catalogue separate from draft content.
+* Record publishing runs and their outcomes.
+* Prevent incomplete content from reaching the viewer.
+
+### Viewer experience
+
+* Netflix-style browsing layout.
+* Hero section for featured content.
+* Show rows and poster cards.
+* Show detail pages.
+* Search across the published catalogue.
+* Language and section filtering.
+
+### Backend and operations
+
+* Role-based API-key authentication.
+* PostgreSQL database.
+* Local storage abstraction with S3-compatible support.
+* Docker Compose setup for the complete stack.
+* Automated tests and CI workflow.
+
+## Tech stack
+
+| Layer          | Technologies                        |
+| -------------- | ----------------------------------- |
+| Frontend       | React, TypeScript, Vite             |
+| CMS            | React, React Router, TanStack Query |
+| Viewer         | React, React Router, TanStack Query |
+| Backend        | Python, FastAPI                     |
+| Database       | PostgreSQL 16                       |
+| ORM            | SQLAlchemy                          |
+| Storage        | Local disk / S3-compatible storage  |
+| Infrastructure | Docker, Docker Compose              |
+| Testing        | Pytest                              |
+| CI             | GitHub Actions                      |
+
+## Architecture
+
+```text
+                    ┌──────────────────────┐
+                    │      CMS (React)     │
+                    │ Content management   │
+                    │ Artwork uploads      │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   FastAPI Backend    │
+                    │ Auth • CRUD • Search  │
+                    │ Validation • Publish  │
+                    └───────┬───────┬──────┘
+                            │       │
+                 ┌──────────┘       └──────────┐
+                 ▼                             ▼
+       ┌──────────────────┐          ┌──────────────────┐
+       │   PostgreSQL     │          │ Storage Backend  │
+       │ Source of truth  │          │ Local / S3       │
+       └──────────────────┘          └────────┬─────────┘
+                                              │
+                                              ▼
+                                    ┌──────────────────┐
+                                    │ Published        │
+                                    │ catalogue.json   │
+                                    └────────┬─────────┘
+                                             │
+                                             ▼
+                                    ┌──────────────────┐
+                                    │  Viewer (React)  │
+                                    │ Browse • Search   │
+                                    │ Shows • Episodes  │
+                                    └──────────────────┘
+```
+
+## How the publishing workflow works
+
+```text
+1. Editor creates or updates content
+                ↓
+2. Artwork and metadata are validated
+                ↓
+3. Validation report identifies issues
+                ↓
+4. Blocking issues must be resolved
+                ↓
+5. Publish generates the catalogue
+                ↓
+6. Catalogue is written atomically
+                ↓
+7. Viewer serves the published snapshot
+```
+
+### Why this approach?
+
+The viewer should not depend on incomplete CMS edits or a database query running at the exact moment someone is browsing.
+
+Instead, the viewer reads a **published catalogue snapshot**. This provides:
+
+* A consistent catalogue for viewers.
+* A clear boundary between drafts and live content.
+* A simple publishing model.
+* A natural path toward CDN caching and production delivery.
+
+## Project structure
+
+```text
+Peblo-mini-tv-main/
+│
+├── backend/
+│   ├── app/
+│   │   ├── core/              # Configuration, authentication, database
+│   │   ├── models/            # Database models
+│   │   ├── routers/           # API endpoints
+│   │   ├── schemas/           # Request/response schemas
+│   │   ├── services/          # Validation, publishing, reports
+│   │   └── storage/           # Local and S3-compatible storage
+│   ├── seed/                  # Demo data and demo fixer
+│   ├── tests/                 # Backend tests
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── cms/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   └── pages/
+│   ├── Dockerfile
+│   └── package.json
+│
+├── viewer/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   └── pages/
+│   ├── Dockerfile
+│   └── package.json
+│
+├── storage_data/
+├── .github/workflows/ci.yml
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+## Getting started
+
+### Prerequisites
+
+* Docker
+* Docker Compose v2
+
+No local Python, Node.js, or PostgreSQL installation is required when running the complete stack through Docker.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/<your-username>/peblo-mini-tv.git
+cd peblo-mini-tv
+```
+
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
+```
+
+Review the values in `.env` before starting the project.
+
+### 3. Start the application
+
+```bash
 docker-compose up --build
 ```
 
-This brings up, seeded and working:
-- **API** on http://localhost:8088 (health check: `GET /health`)
-- **CMS** on http://localhost:5180 — open Settings first and paste an API key
-  (`editor-key-change-me` or `admin-key-change-me` from `.env`, or your own
-  values if you changed them)
-- **Viewer** on http://localhost:5190 — nothing to configure, it's public
+### 4. Open the services
 
-The API container seeds demo data on first boot (2 published shows — one
-clean, one with deliberate validation issues — and 1 draft show). Nothing
-is published to the catalogue until you hit **Publish** in the CMS, so the
-Viewer starts empty until you do that.
+| Service          | URL                          |
+| ---------------- | ---------------------------- |
+| API              | http://localhost:8088        |
+| API health check | http://localhost:8088/health |
+| CMS              | http://localhost:5180        |
+| Viewer           | http://localhost:5190        |
 
-### Suggested first flow
-1. Open the CMS → Settings → paste the **admin** key.
-2. Go to **Publish** → see the validation report surface the seeded issues
-   (missing durations, missing thumbnails, missing poster/banner images).
-   Publish is blocked while *any* issue exists — that's intentional, so you
-   can see the report doing its job on real broken data.
-3. To actually get past that block without manually uploading real images
-   for every seeded show, run the demo fixer once the containers are up:
-   ```bash
-   docker-compose exec api python -m seed.fix_demo_data
-   ```
-   This adds correctly-sized placeholder poster/banner/thumbnail images and
-   fills the one missing duration — it does NOT touch the deliberate issues
-   in `seed.py` itself, so re-running `docker-compose up --build` (which
-   re-seeds) will bring the issues back until you run the fixer again.
-4. Reload the CMS Publish tab → 0 blocking issues → **Publish catalogue**.
-5. Open the Viewer → the published shows now appear with their rows, hero,
-   and search.
+### 5. Try the demo workflow
 
-### Running tests
+1. Open the CMS.
+2. Go to **Settings** and configure an API key.
+3. Open **Publish**.
+4. Review the validation report.
+5. Resolve the demo issues using the fixer.
+6. Publish the catalogue.
+7. Open the Viewer and browse the published content.
+
+To run the demo fixer:
+
 ```bash
-cd backend && pip install -r requirements.txt && pytest -q
+docker-compose exec api python -m seed.fix_demo_data
 ```
-15 tests cover: role enforcement (editor vs admin, actually blocking
-requests — not just declared), publish blocking on validation issues,
-`content_group` → single catalogue entry with a `languages` list, Season 0
-excluded from normal seasons, and artwork validation (aspect ratio, size
-ceiling).
 
----
+## Running tests
 
-## Decisions & trade-offs
+```bash
+cd backend
+pip install -r requirements.txt
+pytest -q
+```
 
-- **Auth is a static `X-API-Key` → role mapping**, not JWT/OAuth. This
-  demonstrates real, enforced role checks (not just declared ones) without
-  building a full user system, which was out of scope for a mini. A real
-  Peblo deployment would swap this for the actual identity provider; only
-  `app/core/auth.py` would change.
-- **`Base.metadata.create_all()` instead of Alembic migrations.** Faster to
-  get right for a fixed, small schema; a real project would use Alembic
-  from day one so schema changes are reviewable and reversible.
-- **Search is in-memory over the published catalogue JSON**, not a DB
-  query or search index. See Part E below for exactly where this breaks
-  down and what replaces it.
-- **CMS auth UX is a pasted key in Settings**, not a login screen — kept
-  deliberately minimal since the API auth itself is already simplified.
+The test suite covers:
 
-## Part E — Written
+* Role enforcement.
+* Publish blocking when validation issues exist.
+* Catalogue generation.
+* Language grouping.
+* Season handling.
+* Artwork validation.
+* Publishing service behavior.
 
-**How publishing is atomic, and what happens if the process dies mid-publish.**
-The publish job builds the whole catalogue in memory, serializes it once,
-then writes it via `storage.atomic_write_bytes()`. On local disk this
-writes to a temp file in the same directory and calls `os.replace()`,
-which is atomic on POSIX and Windows — a reader either sees the complete
-old file or the complete new file, never a partial one. On S3-compatible
-storage (R2/MinIO) a single `PUT` is already atomic from a reader's
-perspective, so we stage to a `.staging` key and copy it into place, then
-delete the staging object. If the process dies before the write completes,
-the live `catalogue.json` is untouched and readers keep serving the last
-good publish — nothing is ever half-written. The `PublishRun` row is
-inserted as `"running"` before the write and updated to `"success"` or
-`"failed"` after; if the process dies between the file write succeeding
-and that final commit, the file is correct but the run row is stuck at
-`"running"`. That's a known gap: a stuck-run detector (treat any `"running"`
-run older than N minutes as failed, prompting a re-publish) is a
-documented follow-up, not implemented here.
+## API overview
 
-**Storage abstraction — what changes to move from local disk to
-Cloudflare R2?** Nothing above `app/storage/`. `StorageBackend` is an
-abstract interface (`write_bytes`, `read_bytes`, `exists`,
-`atomic_write_bytes`, `url_for`); `LocalDiskStorage` and
-`S3CompatibleStorage` both implement it, and `app/storage/__init__.py`
-picks one based on `STORAGE_BACKEND`. Moving to R2 means setting
-`STORAGE_BACKEND=s3` plus the four `STORAGE_S3_*` variables (R2 speaks the
-S3 API). The only behavioral differences worth calling out: R2 has zero
-egress fees, so serving artwork/catalogue reads directly from R2 stops
-being a cost concern the way S3 egress would be; and `url_for` on S3 mode
-returns a presigned URL instead of a static path, so anything caching URLs
-long-term would need to switch to public bucket URLs or re-sign.
+The backend exposes endpoints for:
 
-**Search — how it's implemented, where it stops working, what's next.**
-`/catalog/search` loads the published `catalogue.json` and filters it in
-memory: substring match on show/episode title and category, plus
-`language`/`section` filters that all compose. This is fine at the scale
-this catalogue realistically lives at — hundreds of shows, a few thousand
-episodes, a JSON file well under a megabyte. It stops working gracefully
-once the catalogue grows to the point where deserializing and scanning it
-on every request adds meaningful latency, roughly high hundreds of KB to
-low MB of JSON, or once someone wants ranked/fuzzy results instead of
-substring matches. The next step would be a proper search index (Postgres
-full-text search with a `tsvector` column populated at publish time, or an
-external index like Meilisearch/Typesense if relevance ranking or typo
-tolerance matters) built from the same publish step, so the read path
-stays fast and the write path stays simple.
+| Area      | Purpose                                |
+| --------- | -------------------------------------- |
+| Health    | Service health check                   |
+| Shows     | Show and metadata management           |
+| Episodes  | Episode management                     |
+| Artwork   | Artwork upload and validation          |
+| Catalogue | Published catalogue and search         |
+| Publish   | Publishing workflow                    |
+| Admin     | Validation reports and publishing runs |
 
-**Why serve a pre-published catalogue file instead of querying the
-database per request? Where does that choice bite you?** A viewer-facing,
-child-facing surface needs to be fast and resilient regardless of what's
-happening in the CMS or database — a slow admin query, a mid-edit show, or
-a DB hiccup shouldn't be visible to a kid browsing. Publishing a flat file
-also gives a natural point-in-time snapshot: everyone sees the same
-catalogue until the next publish, which is easy to reason about and cheap
-to serve or CDN-cache. It bites you in two places: (1) staleness — an
-editor who just fixed something has to remember to hit Publish, and there
-is no "preview my unpublished change" path in this build; and (2) it
-duplicates data (DB is the source of truth, the file is a derived copy),
-so any future feature that needs live state — e.g. "show a badge if this
-episode was just added today" — either needs to bake that into the
-publish step or accept it'll be off by up to one publish cycle.
+The API uses `X-API-Key` authentication with role mapping for the mini-project.
 
-**What was left out, and why.** No Alembic migrations (see Decisions
-above). No versioned catalogue / rollback / diff / audit log — all three
-stretch items were skipped in favor of getting Parts A–D solid; the
-`PublishRun` table already records who/when/counts/outcome, which is the
-minimum scaffolding a rollback feature would build on. No real user
-accounts — static API keys stand in for auth. No CDN/production
-deployment target — the GitHub Actions deploy step is written and
-explained but not wired to a real cloud account, per the challenge's own
-allowance. Search is substring-only, not fuzzy/ranked (see above).
+## Design decisions
 
-**Which AI tools were used, and where output was accepted or rejected.**
-This implementation was built with Claude (Anthropic) end-to-end,
-generating the FastAPI backend, both React frontends, the docker-compose
-setup, CI workflow, and this README, based directly on the challenge
-document. Where AI-suggested approaches were adjusted: the S3 backend's
-`atomic_write_bytes` initially assumed in-place partial writes were
-possible on S3, which isn't accurate — this was corrected to the
-stage-then-copy approach described above once the actual S3 object model
-was considered. Ambiguous points (e.g. exact validation-report grouping
-granularity, whether `/admin/validation-report` should be editor- or
-admin-only) were resolved with an explicit decision rather than a
-follow-up question, per the challenge's own instruction to do that and
-note it — both are called out inline in code comments.
+### Static API-key authentication
 
-## Secrets in production
+The project uses API keys mapped to roles instead of JWT/OAuth.
 
-For local dev, `.env` (git-ignored) is fine. In production: API keys /
-DB credentials / S3 credentials would live in a secrets manager (AWS
-Secrets Manager, GCP Secret Manager, or Doppler/1Password for smaller
-teams), injected into the container at deploy time as environment
-variables — never baked into the image or committed. The GitHub Actions
-workflow would pull them from encrypted repo/environment secrets for the
-deploy step. Rotation would be handled by the secrets manager, not by
-hand-editing `.env` files.
+This keeps authentication intentionally lightweight while still demonstrating **real role enforcement**. A production deployment would replace this with an identity provider.
 
-## What to alert on
+### Pre-published catalogue
 
-**Publish failure rate.** A failed `PublishRun` (`outcome == "failed"`) is
-the single highest-signal event in this system: it means content the CMS
-team believes is live isn't actually reflected in what viewers see, with
-no other visible symptom (the site doesn't go down, it just goes stale).
-Alerting on `/admin/catalog/runs` showing any `"failed"` outcome, or on no
-successful run in an unexpectedly long window, catches both an active bug
-and the "editor thinks they published but nothing happened" case before a
-content team notices something's missing on their own.
+The viewer reads a generated catalogue instead of querying the database for every request.
 
-## Time spent (rough)
+This makes the viewer-facing experience independent of live CMS edits and provides a clear point-in-time snapshot.
 
-- Part A (backend): ~40%
-- Part B (CMS): ~20%
-- Part C (Viewer): ~15%
-- Part D (pipeline/ops): ~15%
-- Part E (this README) + polish: ~10%
+### Atomic publishing
+
+Publishing writes the generated catalogue as a complete file rather than exposing partial writes.
+
+The storage layer supports local disk and S3-compatible backends, making it possible to move storage without changing the publishing service.
+
+### Simple search
+
+Search is implemented as substring matching over the published catalogue.
+
+This is suitable for a mini-project and provides a clear upgrade path toward a dedicated search index.
+
+## What I learned from this project
+
+* Designing a system around a **source of truth** and a **published read model**.
+* Separating content management from the viewer experience.
+* Building validation into a publishing workflow.
+* Implementing role checks at the API level.
+* Using Docker Compose to run a multi-service application.
+* Designing a storage abstraction that can support local and cloud storage.
+* Writing tests for business rules rather than only checking that endpoints exist.
+
+## Future improvements
+
+* JWT/OAuth-based authentication.
+* Alembic database migrations.
+* Versioned catalogue with rollback and diff support.
+* Audit logs for publishing actions.
+* Fuzzy and ranked search.
+* Production deployment with CDN-backed storage.
+* Automated deployment through GitHub Actions.
+* Better preview and draft workflows.
+* Monitoring and alerting for failed publishing runs.
+
+## Screenshots
+
+Add screenshots of your actual running application here:
+
+```md
+### CMS
+
+<img width="640" height="293" alt="image" src="https://github.com/user-attachments/assets/03887491-ddc8-43da-9c35-8f3c117ccaa0" />
+
+
+### Viewer
+
+<img width="626" height="286" alt="image" src="https://github.com/user-attachments/assets/95dc2e6f-b191-4bd4-b989-073c898411ff" />
+
+
+### Publish validation
+
+![Publish validation screenshot](screenshots/publish-validation.png)
+```
+
+## Author
+
+**Deepal Deep**
+
+Built as a full-stack engineering project to explore content platforms, publishing workflows, and production-oriented backend design.
