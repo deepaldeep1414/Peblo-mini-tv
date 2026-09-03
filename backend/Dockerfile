@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# NOTE: 8088 is the deliberately non-default port for this API (usual is 8000)
+# Port: defaults to 8088 locally; Render injects $PORT (10000 on free tier)
 EXPOSE 8088
 
-CMD sh -c "python -m seed.seed; uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8088}"
+# Use shell form so $PORT is expanded at runtime
+CMD sh -c "python -m seed.seed && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8088}"
