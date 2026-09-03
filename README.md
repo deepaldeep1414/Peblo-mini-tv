@@ -327,17 +327,23 @@ Add screenshots of your actual running application here:
 ```md
 ### CMS
 
-<img width="640" height="293" alt="image" src="https://github.com/user-attachments/assets/03887491-ddc8-43da-9c35-8f3c117ccaa0" />
+<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/e745cf2a-269d-4209-bc5b-bb42168813ac" />
+
 
 
 ### Viewer
+<img width="624" height="286" alt="image" src="https://github.com/user-attachments/assets/f30bd70a-fe85-4930-80a9-2834a4c02376" />
 
-<img width="626" height="286" alt="image" src="https://github.com/user-attachments/assets/95dc2e6f-b191-4bd4-b989-073c898411ff" />
+
+<img width="631" height="295" alt="image" src="https://github.com/user-attachments/assets/22adc82e-49e7-41eb-b915-b67debb451a1" />
+
+
 
 
 ### Publish validation
+<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/898c6fd2-4f21-4fe6-99f0-4436d9801c85" />
 
-![Publish validation screenshot](screenshots/publish-validation.png)
+
 ```
 
 ## Author
