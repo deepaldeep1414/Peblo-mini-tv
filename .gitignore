@@ -1,0 +1,9 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+storage_data/artwork/*
+!storage_data/artwork/.gitkeep
+*.tsbuildinfo

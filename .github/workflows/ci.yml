@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: pip install ruff
+      - name: Lint
+        run: ruff check app
+      - name: Test
+        run: pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [cms, viewer]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm install
+      - name: Typecheck
+        run: npx tsc -b --noEmit
+      - name: Build
+        run: npm run build
+
+  build-images:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t peblo-tv-mini-api:${{ github.sha }} ./backend
+      - name: Build CMS image
+        run: docker build -t peblo-tv-mini-cms:${{ github.sha }} ./cms
+      - name: Build Viewer image
+        run: docker build -t peblo-tv-mini-viewer:${{ github.sha }} ./viewer
+      # Images are built but intentionally not pushed anywhere in this
+      # exercise -- there's no real registry/cloud target. Wiring in
+      # `docker/login-action` + `docker push` here is a ~10-line addition
+      # once a registry (ECR/GCR/ghcr.io) and its credentials exist.
+
+  deploy:
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy (placeholder)
+        run: |
+          echo "This is where we'd deploy. In a real environment this step would:"
+          echo "  1. Push the three images built above to a registry (ghcr.io/ECR/GCR)."
+          echo "  2. Run DB migrations against the target Postgres (alembic upgrade head)."
+          echo "  3. Update the running service (ECS/Cloud Run/Fly/K8s) to the new image tag,"
+          echo "     e.g. 'aws ecs update-service --force-new-deployment' or 'flyctl deploy'."
+          echo "  4. Wait for /health to return 200 before considering the deploy complete,"
+          echo "     and roll back the service to the previous image tag on failure."
+          echo "No real cloud target is configured for this take-home; see README Part E."

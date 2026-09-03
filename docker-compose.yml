@@ -1,0 +1,73 @@
+version: "3.9"
+
+# PORT NOTE: every port below is deliberately changed from its usual
+# default (see README "Ports" section for the full before/after table):
+#   Postgres  55432 (usual 5432)   API 8088 (usual 8000)
+#   CMS       5180  (usual 5173)   Viewer 5190 (usual 5173/5174)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: peblo
+      POSTGRES_PASSWORD: peblo
+      POSTGRES_DB: peblo_tv_mini
+    ports:
+      - "55432:5432"   # host:container -- container stays on Postgres' real default
+    volumes:
+      - peblo_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peblo -d peblo_tv_mini"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://peblo:peblo@db:5432/peblo_tv_mini
+      STORAGE_BACKEND: local
+      STORAGE_ROOT: /data/storage
+      API_PORT: "8088"
+    ports:
+      - "8088:8088"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - peblo_storage:/data/storage
+    command: >
+      sh -c "python -m seed.seed && uvicorn app.main:app --host 0.0.0.0 --port 8088"
+
+  cms:
+    build: ./cms
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE: http://localhost:8088
+    ports:
+      - "5180:5180"
+    depends_on:
+      - api
+    volumes:
+      - ./cms:/app
+      - /app/node_modules
+
+  viewer:
+    build: ./viewer
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE: http://localhost:8088
+    ports:
+      - "5190:5190"
+    depends_on:
+      - api
+    volumes:
+      - ./viewer:/app
+      - /app/node_modules
+
+volumes:
+  peblo_pg_data:
+  peblo_storage:
