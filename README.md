@@ -17,6 +17,32 @@ Peblo Mini TV is designed around a simple but important separation:
 
 The project focuses on **content publishing reliability**, not just building a streaming UI.
 
+
+## Screenshots
+
+Add screenshots of your actual running application here:
+
+### CMS
+
+<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/e745cf2a-269d-4209-bc5b-bb42168813ac" />
+
+
+
+### Viewer
+<img width="624" height="286" alt="image" src="https://github.com/user-attachments/assets/f30bd70a-fe85-4930-80a9-2834a4c02376" />
+
+
+<img width="631" height="295" alt="image" src="https://github.com/user-attachments/assets/22adc82e-49e7-41eb-b915-b67debb451a1" />
+
+
+
+
+### Publish validation
+<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/898c6fd2-4f21-4fe6-99f0-4436d9801c85" />
+
+
+```
+
 ## Features
 
 ### Content management
@@ -320,30 +346,7 @@ This is suitable for a mini-project and provides a clear upgrade path toward a d
 * Better preview and draft workflows.
 * Monitoring and alerting for failed publishing runs.
 
-## Screenshots
 
-Add screenshots of your actual running application here:
-
-### CMS
-
-<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/e745cf2a-269d-4209-bc5b-bb42168813ac" />
-
-
-
-### Viewer
-<img width="624" height="286" alt="image" src="https://github.com/user-attachments/assets/f30bd70a-fe85-4930-80a9-2834a4c02376" />
-
-
-<img width="631" height="295" alt="image" src="https://github.com/user-attachments/assets/22adc82e-49e7-41eb-b915-b67debb451a1" />
-
-
-
-
-### Publish validation
-<img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/898c6fd2-4f21-4fe6-99f0-4436d9801c85" />
-
-
-```
 
 ## Author
 
