@@ -324,7 +324,6 @@ This is suitable for a mini-project and provides a clear upgrade path toward a d
 
 Add screenshots of your actual running application here:
 
-```md
 ### CMS
 
 <img width="638" height="295" alt="image" src="https://github.com/user-attachments/assets/e745cf2a-269d-4209-bc5b-bb42168813ac" />
