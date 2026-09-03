@@ -27,17 +27,14 @@ services:
       - key: STORAGE_BACKEND
         value: local
       - key: STORAGE_ROOT
-        value: /data/storage
+        value: /tmp/storage
       - key: EDITOR_API_KEY
         generateValue: true
       - key: ADMIN_API_KEY
         generateValue: true
       - key: CORS_ORIGINS
         value: "https://peblo-cms.onrender.com,https://peblo-viewer.onrender.com"
-    disk:
-      name: peblo-storage
-      mountPath: /data/storage
-      sizeGB: 1
+
 
   # ── CMS (React / Vite — Static Site) ────────────────────────────────────────
   - type: web
